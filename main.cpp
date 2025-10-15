@@ -158,7 +158,7 @@ class Core {
 
                 default:
                     if (opcode == 0) {} else {
-                        std::cout << "Unknown opcode " << opcode << " at PC " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << pc << std::dec << ". Shutting down." << std::endl;
+                        std::cout << "Unbekannter Opcode " << opcode << " bei PC " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << pc << std::dec << ". Fahre herunter." << std::endl;
                         state = false;
                         break;
                     }
@@ -172,7 +172,7 @@ class Core {
 
         void ldi(unsigned int dest, unsigned int src1, unsigned int src2) {
             if (pc + 4 > ram.get_size()) {
-                std::cout << "LDI: Not enough space for 32-bit immediate value at PC " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << pc << std::dec << ". Shutting down." << std::endl;
+                std::cout << "LDI: Nicht genügend Platz für 32-Bit Wert bei PC " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << pc << std::dec << ". Fahre herunter." << std::endl;
                 state = false;
                 return;
             }
@@ -230,7 +230,7 @@ class Core {
             unsigned int val2 = registers[src2];
 
             if (val2 == 0) {
-                std::cout << "Division by zero at PC " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << pc << std::dec << ". Shutting down." << std::endl;
+                std::cout << "Division durch Null bei PC " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << pc << std::dec << ". Fahre herunter." << std::endl;
                 state = false;
                 return;
             }
@@ -247,7 +247,6 @@ class Core {
 
         // Extended
         void halt() {
-            std::cout << "HALTING" << std::endl;
             state = false;
         }
 
@@ -357,7 +356,7 @@ class Core {
 
         void execute() {
             if (pc + 1 >= ram.get_size()) {
-                std::cout << "PC out of bounds at " << pc << ". Shutting down." << std::endl;
+                std::cout << "PC außerhalb vom RAM bei Addresse " << pc << ". Fahre herunter." << std::endl;
                 state = false;
                 return;
             }
@@ -402,7 +401,7 @@ class Core {
                     break;
 
                 default:
-                    std::cout << "Unknown opcode " << opcode << " at PC " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << pc << std::dec << ". Shutting down." << std::endl;
+                    std::cout << "Unbekannter Opcode " << opcode << " bei PC " << std::hex << std::uppercase << std::setfill('0') << std::setw(8) << pc << std::dec << ". Fahre herunter." << std::endl;
                     state = false;
                     break;
             }
@@ -418,7 +417,7 @@ class Core {
             std::cout << "S=" << (int)flags[SIGN_IDX] << " (Sign) ";
             std::cout << "O=" << (int)flags[OVERFLOW_IDX] << " (Overflow)" << std::endl;
 
-            std::cout << "\nRegisters:" << std::endl;
+            std::cout << "\nRegister:" << std::endl;
             for (int i = 0; i < REGISTER_COUNT; ++i) {
                 std::cout << "R" << std::setw(2) << std::dec << i << std::hex << ": 0x"
                         << std::setw(8) << registers[i] << "  ";
@@ -443,7 +442,7 @@ class Clock {
             while (core.get_state()) {
                 core.execute();
             }
-            std::cout << "Core has stopped." << std::endl;
+            std::cout << "Core ist angehalten." << std::endl;
         }
 
 };
@@ -452,13 +451,13 @@ bool load_binary_file(const std::string& filename, ByteImage& target_ram) {
     std::ifstream file(filename, std::ios::binary | std::ios::in);
 
     if (!file.is_open()) {
-        std::cerr << "Fehler: Konnte die Datei '" << filename << "' nicht öffnen." << std::endl;
+        std::cerr << "Konnte die Datei '" << filename << "' nicht öffnen." << std::endl;
         return false;
     }
 
     std::vector<char> header_buffer(HEADER_SIZE);
     if (!file.read(header_buffer.data(), HEADER_SIZE)) {
-        std::cerr << "Fehler: Konnte den Programmkopf (Header) der Datei nicht lesen." << std::endl;
+        std::cerr << "Konnte den Header der Datei nicht lesen." << std::endl;
         return false;
     }
 
@@ -477,15 +476,15 @@ bool load_binary_file(const std::string& filename, ByteImage& target_ram) {
 
 
     if (magic != MAGIC) {
-        std::cerr << "Fehler: Magic Number in program is invalid." << std::endl
-                  << "expected: " << std::hex << MAGIC << std::endl
-                  << "got: " << std::hex << magic << std::endl;
+        std::cerr << "Magic Number im Programm stimmt nicht überein." << std::endl
+                  << "Erwartet: " << std::hex << MAGIC << std::endl
+                  << "Erhalten: " << std::hex << magic << std::endl;
         return false;
     }
 
     std::vector<unsigned char> program_buffer(size);
     if (!file.read((char*)program_buffer.data(), size)) {
-        std::cerr << "Fehler: Konnte das eigentliche Programm (" << size << " Bytes) nicht auslesen." << std::endl;
+        std::cerr << "Konnte das eigentliche Programm (" << size << " Bytes) nicht auslesen." << std::endl;
         return false;
     }
 
