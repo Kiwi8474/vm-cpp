@@ -2,6 +2,8 @@
 #include <vector>
 #include <iomanip>
 #include <fstream>
+#include <string>
+#include <ostream>
 
 #define RAM_SIZE 65536 // in bytes definiert
 
@@ -49,30 +51,36 @@ class ByteImage {
             return result;
         }
 
-        void dump(int max_address) {
+        void dump(std::ostream& os, int max_address) {
+            // Begrenzt den Dump auf RAM_SIZE, falls max_address zu groß ist
+            if (max_address >= (int)memory.size()) {
+                max_address = (int)memory.size() - 1;
+            }
+
             // Auf Hex umstellen, Hex in Großbuchstaben anzeigen und 0 als Füllzeichen verwenden
-            std::cout << std::hex << std::uppercase << std::setfill('0');
+            os << std::hex << std::uppercase << std::setfill('0');
+            os << "\n--- RAM DUMP (0x0000 bis 0x" << std::setw(4) << max_address << ") ---\n";
 
             for (int i = 0; i <= max_address; i += 16) { // 16 ist, wie viele Bytes in einer Zeile sind+
                 // Zeigt die Addresse des ersten Bytes der Zeile an
-                std::cout << std::setw(8) << i << ": ";
+                os << std::setw(4) << i << ": ";
 
                 for (int j = 0; j < 16; j++) { // Hier genau so
                     int current_adress = i + j;
 
                     if (current_adress <= max_address) {
                         // Zeigt den Byte an
-                        std::cout << std::setw(2) << (int)read(current_adress) << " ";
+                        os << std::setw(2) << (int)read(current_adress) << " ";
                     } else {
-                        std::cout << "   ";
+                        os << "   ";
                     }
                 }
 
                 // Trennzeichen zur ASCII Spalte
-                std::cout << " | ";
+                os << " | ";
 
                 // Auf Dezimal umstellen
-                std::cout << std::dec;
+                os << std::dec;
 
                 for (int j = 0; j < 16; j++) { // 16 ist wieder Bytes pro Zeile
                     int current_adress = i + j;
@@ -81,20 +89,20 @@ class ByteImage {
                         unsigned char byte = read(current_adress);
 
                         if (byte >= 32 && byte <= 126) { // nur druckbare ASCII Zeichen abbilden
-                            std::cout << byte; // byte ist unsigned char, also automatisch ein ASCII
+                            os << byte; // byte ist unsigned char, also automatisch ein ASCII
                         } else {
-                            std::cout << "."; // für nicht-druckbares ein .
+                            os << "."; // für nicht-druckbares ein .
                         }
                     }
                 }
 
                 // Zeilenumbruch nach jeder Zeile
-                std::cout << std::endl;
+                os << std::endl;
                 // Und auf Hex umstellen
-                std::cout << std::hex;
+                os << std::hex;
             }
             // Nach dem dump wieder auf dezimal umstellen
-            std::cout << std::dec << std::noshowbase << std::endl; 
+            os << std::dec << std::noshowbase << std::endl; 
         }
 };
 
@@ -438,11 +446,19 @@ class Clock {
     public:
         Clock(Core& core) : core(core) {}
 
-        void run() {
+        void run(int max_steps = -1) { 
+            int steps = 0;
             while (core.get_state()) {
+                // Wenn ein Limit gesetzt ist und dieses erreicht ist, wird gestoppt
+                if (max_steps != -1 && steps >= max_steps) {
+                    std::cout << "\nACHTUNG: Maximales Schrittlimit (" << max_steps << ") erreicht. Fahre herunter.\n";
+                    core.power(); // Setzt den Zustand auf false
+                    break;
+                }
                 core.execute();
+                steps++;
             }
-            std::cout << "Core ist angehalten." << std::endl;
+            std::cout << "Core ist angehalten. Total: " << steps << " Schritte." << std::endl;
         }
 
 };
@@ -494,21 +510,38 @@ bool load_binary_file(const std::string& filename, ByteImage& target_ram) {
     return true;
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+    if (argc != 2) {
+        std::cerr << "Verwendung: " << argv[0] << " <programm.bin>" << std::endl;
+        return 1;
+    }
+
     ByteImage ram(RAM_SIZE);
     Core core(ram);
     Clock clock(core);
 
-    const std::string program_file = "pentest.bin";
+    const std::string program_file = argv[1]; 
 
     if (!load_binary_file(program_file, ram)) {
         return 1;
     }
     
     core.power();
-    clock.run();
+    clock.run(50000);
 
-    ram.dump(0x00FF);
+    std::ofstream dump_file("ram_dump.txt");
+
+    if (dump_file.is_open()) {
+        std::cout << "\n--- RAM DUMP wird in 'ram_dump.txt' geschrieben... ---\n";
+        // RAM Dump wird in die Datei geschrieben
+        ram.dump(dump_file, 0xFFFF); 
+        dump_file.close();
+        std::cout << "--- RAM DUMP fertig. Datei wurde geschlossen. ---\n";
+    } else {
+        std::cerr << "FEHLER: Konnte 'ram_dump.txt' nicht zum Schreiben oeffnen. RAM Dump wird in das Terminal ausgegeben.\n";
+        // Fallback: Wenn Datei fehlschlaegt, in das Terminal schreiben (wird aber unuebersichtlich)
+        ram.dump(std::cout, 0xFFFF);
+    }
     core.dump();
 
     return 0;
