@@ -163,6 +163,9 @@ class Core {
                 case 0xE:
                     str(dest, src);
                     break;
+                case 0xF:
+                    in(dest, src);
+                    break;
 
                 default:
                     if (opcode == 0) {} else {
@@ -337,6 +340,33 @@ class Core {
         void jgt(unsigned int dest) {
             if (flags[ZERO_IDX] == 0 && flags[SIGN_IDX] == flags[OVERFLOW_IDX]) {
                 pc = registers[dest];
+            }
+        }
+
+        void in(unsigned int dest, unsigned int src) {
+            // Portnummer und Wert aus Registern holen
+            unsigned int port_address = registers[dest];
+
+            switch (port_address) {
+                case 0x02: // Port für Tastatur-Eingabe
+                    {
+                        char input_char = 0;
+
+                        if (std::cin.get(input_char)) {
+                            registers[dest] = (unsigned int)input_char;
+                        } else {
+                            registers[dest] = 0;
+                        } 
+                    }
+                    break;
+                case 0x01: // Status Port (wird ignoriert)
+                    registers[dest] = 1;
+                    break;
+                
+                default:
+                    registers[dest] = 0xFFFFFFFF;
+                    break;
+                }
             }
         }
 
