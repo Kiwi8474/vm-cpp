@@ -368,7 +368,6 @@ class Core {
                     break;
                 }
             }
-        }
 
     public:
         Core(ByteImage& memory) : ram(memory), pc(0) {
